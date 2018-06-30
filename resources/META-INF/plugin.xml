@@ -1,0 +1,28 @@
+<idea-plugin>
+  <id>biz.elfuego.idea.issues.gitea</id>
+  <name>Gitea issues plugin</name>
+  <version>1.0</version>
+  <vendor email="support@elfuego.biz" url="http://elfuego.biz">elfuego.biz</vendor>
+
+  <description><![CDATA[
+      Gitea issue tracker integration plugin (http://gitea.io)
+    ]]></description>
+
+  <change-notes><![CDATA[
+      First implementation.<br>
+    ]]>
+  </change-notes>
+
+  <idea-version since-build="173.0"/>
+
+  <depends>com.intellij.modules.lang</depends>
+  <depends>com.intellij.tasks</depends>
+
+  <extensions defaultExtensionNs="com.intellij">
+    <tasks.repositoryType implementation="biz.elfuego.idea.issues.gitea.GiteaRepositoryType"/>
+  </extensions>
+
+  <actions>
+  </actions>
+
+</idea-plugin>
