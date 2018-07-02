@@ -12,7 +12,7 @@ public class Consts {
     public static final String UNSPEC_PROJ_ID = "--";
 
     public interface Url {
-        String DEFAULT = "https://git2.elfuego.biz:444";
+        String DEFAULT = "https://try.gitea.io";
     }
 
     public interface EndPoint {
@@ -25,24 +25,24 @@ public class Consts {
     }
 
     public enum States {
-        OPEN, CLOSED;
+        OPEN, CLOSED
     }
 
     public interface TaskFields {
-        static final String ID = "id";
-        static final String TITLE = "title";
-        static final String DESCRIPTION = "body";
-        static final String CREATEDAT = "created_at";
-        static final String UPDATEDAT = "updated_at";
-        static final String STATE = "state";
-        static final String ASSIGNEE = "assignee";
+        String ID = "id";
+        String TITLE = "title";
+        String DESCRIPTION = "body";
+        String CREATEDAT = "created_at";
+        String UPDATEDAT = "updated_at";
+        String STATE = "state";
+        String ASSIGNEE = "assignee";
     }
 
     public interface CommentFields {
-        static final String DATE = "updated_at";
-        static final String TEXT = "body";
-        static final String USER = "user";
-        static final String FULLNAME = "full_name";
-        static final String USERNAME = "username";
+        String DATE = "updated_at";
+        String TEXT = "body";
+        String USER = "user";
+        String FULLNAME = "full_name";
+        String USERNAME = "username";
     }
 }
