@@ -98,6 +98,8 @@ public class GiteaRepositoryEditor extends BaseRepositoryEditor<GiteaRepository>
         @NotNull
         @Override
         protected List<GiteaProject> fetch(@NotNull ProgressIndicator indicator) throws Exception {
+            myRepository.setSelectedProject(null);
+            myRepository.setProjects(null);
             return myRepository.getProjectList();
         }
     }

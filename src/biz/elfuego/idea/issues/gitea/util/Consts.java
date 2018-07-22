@@ -29,7 +29,7 @@ public class Consts {
     }
 
     public interface TaskFields {
-        String ID = "id";
+        String NUMBER = "number";
         String TITLE = "title";
         String DESCRIPTION = "body";
         String CREATEDAT = "created_at";

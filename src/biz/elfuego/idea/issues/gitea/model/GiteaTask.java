@@ -111,8 +111,8 @@ public class GiteaTask {
     }
 
     private void fromJson(JsonObject current) {
-        if (current.has(TaskFields.ID)) {
-            this.setId(getString(current, TaskFields.ID, ""));
+        if (current.has(TaskFields.NUMBER)) {
+            this.setId(getString(current, TaskFields.NUMBER, ""));
         }
         if (current.has(TaskFields.TITLE)) {
             this.setTitle(getString(current, TaskFields.TITLE, ""));
