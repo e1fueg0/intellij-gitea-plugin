@@ -1,7 +1,7 @@
 <idea-plugin>
   <id>biz.elfuego.idea.issues.gitea</id>
   <name>Gitea issues plugin</name>
-  <version>1.2</version>
+  <version>1.3</version>
   <vendor email="support@elfuego.biz" url="http://elfuego.biz">elfuego.biz</vendor>
 
   <description><![CDATA[

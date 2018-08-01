@@ -11,6 +11,23 @@ public class Consts {
     public static final String ERROR = "Error communicating to the server";
     public static final String UNSPEC_PROJ_ID = "--";
 
+    public enum ProjectFilter {
+        GENERAL("General search"),
+        CONTRUBUTOR("Owned and participated by me"),
+        OWNER("Owned by me");
+
+        private final String message;
+
+        ProjectFilter(String message) {
+            this.message = message;
+        }
+
+        @Override
+        public String toString() {
+            return this.message;
+        }
+    }
+
     public interface Url {
         String DEFAULT = "https://try.gitea.io";
     }
@@ -21,7 +38,9 @@ public class Consts {
         String REPOS = "/repos/";
         String ISSUES = "/issues";
         String COMMENTS = "/comments";
-        String REPOS_SEARCH = REPOS + "search?uid=";
+        String REPOS_SEARCH = REPOS + "search";
+        String REPOS_SEARCH_UID = REPOS + "search?uid=";
+        String REPOS_SEARCH_UID_EX = REPOS + "search?exclusive=true&uid=";
     }
 
     public enum States {

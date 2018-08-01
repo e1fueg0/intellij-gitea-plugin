@@ -22,10 +22,10 @@ import java.util.Date;
  * @date 2018.06.30
  */
 public class GiteaTaskImpl extends Task implements Comparable<GiteaTaskImpl> {
-    private GiteaProject project;
-    private GiteaRepository repository;
+    private final GiteaProject project;
+    private final GiteaRepository repository;
     private Comment[] comments;
-    GiteaTask task;
+    final GiteaTask task;
 
     GiteaTaskImpl(@NotNull GiteaRepository repository, @NotNull GiteaTask task) {
         this.repository = repository;
