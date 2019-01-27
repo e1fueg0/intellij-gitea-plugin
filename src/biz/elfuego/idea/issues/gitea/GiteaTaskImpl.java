@@ -3,7 +3,6 @@
  */
 package biz.elfuego.idea.issues.gitea;
 
-import biz.elfuego.idea.issues.gitea.model.GiteaProject;
 import biz.elfuego.idea.issues.gitea.model.GiteaTask;
 import biz.elfuego.idea.issues.gitea.util.Consts;
 import com.intellij.openapi.util.IconLoader;
@@ -22,7 +21,7 @@ import java.util.Date;
  * @date 2018.06.30
  */
 public class GiteaTaskImpl extends Task implements Comparable<GiteaTaskImpl> {
-    private final GiteaProject project;
+    private final String project;
     private final GiteaRepository repository;
     private Comment[] comments;
     final GiteaTask task;
@@ -107,7 +106,7 @@ public class GiteaTaskImpl extends Task implements Comparable<GiteaTaskImpl> {
     @Nullable
     @Override
     public String getIssueUrl() {
-        return repository.getUrl() + "/" + project.getName() + Consts.EndPoint.ISSUES + "/" + task.getId();
+        return repository.getUrl() + "/" + project + Consts.EndPoint.ISSUES + "/" + task.getId();
     }
 
     @Override

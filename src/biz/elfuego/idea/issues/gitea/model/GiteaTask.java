@@ -17,7 +17,7 @@ import static biz.elfuego.idea.issues.gitea.util.Utils.getString;
  * @date 2018.06.30
  */
 public class GiteaTask {
-    private GiteaProject project;
+    private String project;
     private String id;
     private String title;
     private String description;
@@ -26,16 +26,17 @@ public class GiteaTask {
     private String state;
     private String assignee;
 
-    public GiteaTask(GiteaProject project, JsonObject json) {
+    public GiteaTask(String project, JsonObject json) {
         this.project = project;
         this.fromJson(json);
     }
 
-    public GiteaProject getProject() {
+    public String getProject() {
         return project;
     }
 
-    public void setProject(GiteaProject project) {
+    @SuppressWarnings("unused")
+    public void setProject(String project) {
         this.project = project;
     }
 
@@ -88,11 +89,11 @@ public class GiteaTask {
         return state;
     }
 
-    @SuppressWarnings("WeakerAccess")
     public void setState(String state) {
         this.state = state;
     }
 
+    @SuppressWarnings("unused")
     public String getAssignee() {
         return assignee;
     }

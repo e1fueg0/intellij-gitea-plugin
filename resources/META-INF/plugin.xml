@@ -9,6 +9,8 @@
     ]]></description>
 
   <change-notes><![CDATA[
+      Changed login method to token authorization.<br>
+      Got rid of project search limitations by implementing manual project name input.<br>
       Fixed "HTTP: Unauthorized" exception.<br>
     ]]>
   </change-notes>
@@ -24,5 +26,4 @@
 
   <actions>
   </actions>
-
 </idea-plugin>

@@ -3,11 +3,9 @@
  */
 package biz.elfuego.idea.issues.gitea;
 
-import biz.elfuego.idea.issues.gitea.model.GiteaProject;
 import biz.elfuego.idea.issues.gitea.model.GiteaTask;
 import biz.elfuego.idea.issues.gitea.util.Consts;
 import biz.elfuego.idea.issues.gitea.util.Consts.CommentFields;
-import biz.elfuego.idea.issues.gitea.util.Consts.ProjectFilter;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -20,12 +18,9 @@ import com.intellij.tasks.CustomTaskState;
 import com.intellij.tasks.Task;
 import com.intellij.tasks.impl.BaseRepositoryImpl;
 import com.intellij.tasks.impl.SimpleComment;
-import com.intellij.util.xmlb.annotations.AbstractCollection;
 import com.intellij.util.xmlb.annotations.Tag;
-import com.intellij.util.xmlb.annotations.Transient;
 import org.apache.commons.httpclient.HttpMethod;
 import org.apache.commons.httpclient.HttpStatus;
-import org.apache.commons.httpclient.auth.AuthPolicy;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.commons.httpclient.methods.PostMethod;
 import org.apache.commons.httpclient.methods.StringRequestEntity;
@@ -51,9 +46,9 @@ class GiteaRepository extends BaseRepositoryImpl {
 
     private String userId = null;
     private String userLogin = null;
-    private ProjectFilter projectFilter = ProjectFilter.GENERAL;
-    private List<GiteaProject> projects = new ArrayList<>();
-    private GiteaProject selectedProject = null;
+    private String repoName = null;
+    private String projName = null;
+    private String token = null;
 
     @SuppressWarnings("UnusedDeclaration")
     public GiteaRepository() {
@@ -72,9 +67,9 @@ class GiteaRepository extends BaseRepositoryImpl {
         super(other);
         userId = other.userId;
         userLogin = other.userLogin;
-        projectFilter = other.projectFilter;
-        projects = other.projects;
-        selectedProject = other.selectedProject;
+        repoName = other.repoName;
+        projName = other.projName;
+        token = other.token;
     }
 
     @Override
@@ -84,9 +79,9 @@ class GiteaRepository extends BaseRepositoryImpl {
         GiteaRepository other = (GiteaRepository) o;
         return equal(userId, other.userId) &&
                 equal(userLogin, other.userLogin) &&
-                equal(projectFilter, other.projectFilter) &&
-                equal(projects, other.projects) &&
-                equal(selectedProject, other.selectedProject);
+                equal(repoName, other.repoName) &&
+                equal(projName, other.projName) &&
+                equal(token, other.token);
     }
 
     private boolean equal(Object o1, Object o2) {
@@ -172,7 +167,7 @@ class GiteaRepository extends BaseRepositoryImpl {
                 "application/json",
                 "UTF-8"
         );
-        HttpMethod patchTask = getPatchMethod(getApiUrl() + Consts.EndPoint.REPOS + selectedProject.getName()
+        HttpMethod patchTask = getPatchMethod(getApiUrl() + Consts.EndPoint.REPOS + getProject()
                 + Consts.EndPoint.ISSUES + "/" + giteaTask.getId(), data);
         executeMethod(patchTask);
     }
@@ -210,10 +205,13 @@ class GiteaRepository extends BaseRepositoryImpl {
         if (result && StringUtil.isEmpty(this.getUrl())) {
             result = false;
         }
-        if (result && StringUtil.isEmpty(this.getUsername())) {
+        if (result && StringUtil.isEmpty(this.getRepoName())) {
             result = false;
         }
-        if (result && StringUtil.isEmpty(this.getPassword())) {
+        if (result && StringUtil.isEmpty(this.getProjName())) {
+            result = false;
+        }
+        if (result && StringUtil.isEmpty(this.getToken())) {
             result = false;
         }
         return result;
@@ -226,14 +224,19 @@ class GiteaRepository extends BaseRepositoryImpl {
             result += "Server";
             errors++;
         }
-        if (StringUtil.isEmpty(getUsername())) {
+        if (StringUtil.isEmpty(getRepoName())) {
             result += !StringUtils.isEmpty(result) ? " & " : "";
-            result += "Username";
+            result += "Repo name";
             errors++;
         }
-        if (StringUtil.isEmpty(getPassword())) {
+        if (StringUtil.isEmpty(getProjName())) {
             result += !StringUtils.isEmpty(result) ? " & " : "";
-            result += "Password";
+            result += "Project name";
+            errors++;
+        }
+        if (StringUtil.isEmpty(getToken())) {
+            result += !StringUtils.isEmpty(result) ? " & " : "";
+            result += "Token";
             errors++;
         }
         if (!result.isEmpty()) {
@@ -242,20 +245,18 @@ class GiteaRepository extends BaseRepositoryImpl {
     }
 
     private Task[] getIssues() throws Exception {
-        if (ifNoSelectedProj())
-            return new Task[]{};
         if (!ensureUserId())
             return new Task[]{};
         List<GiteaTaskImpl> result = new ArrayList<>();
 
-        final String url = getApiUrl() + Consts.EndPoint.REPOS + selectedProject.getName() + Consts.EndPoint.ISSUES;
+        final String url = getApiUrl() + Consts.EndPoint.REPOS + getProject() + Consts.EndPoint.ISSUES;
         final JsonElement response = executeMethod(new GetMethod(url));
         if (response == null)
             return new Task[]{};
         JsonArray tasks = getArray(response);
         for (int i = 0; i < tasks.size(); i++) {
             JsonObject current = tasks.get(i).getAsJsonObject();
-            GiteaTask raw = new GiteaTask(selectedProject, current);
+            GiteaTask raw = new GiteaTask(getProject(), current);
             if (!raw.isValid()) {
                 continue;
             }
@@ -267,18 +268,16 @@ class GiteaRepository extends BaseRepositoryImpl {
         return result.toArray(primArray);
     }
 
-    private boolean ifNoSelectedProj() {
-        return selectedProject == null || selectedProject.getId().equals("-1");
+    private String getProject() {
+        return String.format("%s/%s", repoName, projName);
     }
 
     Comment[] getComments(GiteaTaskImpl task) throws Exception {
-        if (ifNoSelectedProj())
-            return new Comment[]{};
         if (!ensureUserId())
             return new Comment[]{};
         List<SimpleComment> result = new ArrayList<>();
 
-        final String url = getApiUrl() + Consts.EndPoint.REPOS + selectedProject.getName() + Consts.EndPoint.ISSUES
+        final String url = getApiUrl() + Consts.EndPoint.REPOS + getProject() + Consts.EndPoint.ISSUES
                 + "/" + task.getId() + Consts.EndPoint.COMMENTS;
         final JsonElement response = executeMethod(new GetMethod(url));
         if (response == null)
@@ -299,9 +298,8 @@ class GiteaRepository extends BaseRepositoryImpl {
     }
 
     private JsonElement executeMethod(@NotNull HttpMethod method) throws Exception {
+        method.addRequestHeader("Authorization", "token " + token);
         method.addRequestHeader("Content-type", "application/json");
-        List authPrefs = Collections.singletonList(AuthPolicy.BASIC);
-        method.getParams().setParameter(AuthPolicy.AUTH_SCHEME_PRIORITY, authPrefs);
         getHttpClient().executeMethod(method);
 
         if (method.getStatusCode() != HttpStatus.SC_OK && method.getStatusCode() != HttpStatus.SC_CREATED) {
@@ -335,56 +333,31 @@ class GiteaRepository extends BaseRepositoryImpl {
         return true;
     }
 
-    @Transient
-    List<GiteaProject> getProjectList(ProjectFilter projectFilter) throws Exception {
-        if (!ensureUserId())
-            return Collections.emptyList();
-        final String query;
-        if (projectFilter == null)
-            projectFilter = ProjectFilter.GENERAL;
-        switch (projectFilter) {
-            case CONTRUBUTOR:
-                query = Consts.EndPoint.REPOS_SEARCH_UID + userId;
-                break;
-            case OWNER:
-                query = Consts.EndPoint.REPOS_SEARCH_UID_EX + userId;
-                break;
-            default:
-                query = Consts.EndPoint.REPOS_SEARCH;
-                break;
-        }
-        JsonElement response = executeMethod(new GetMethod(getApiUrl() + query));
-        if (response == null)
-            return Collections.emptyList();
-        JsonArray reply = getOkData(response);
-        List<GiteaProject> result = new ArrayList<>();
-        for (int i = 0; i < reply.size(); i++) {
-            JsonObject current = getObject(reply.get(i));
-            GiteaProject project = new GiteaProject().setId(getString(current, "id", ""))
-                    .setName(getString(current, "full_name", ""));
-            if (!project.isValid()) {
-                continue;
-            }
-            result.add(project);
-        }
-        projects = result;
-        return projects;
+    @SuppressWarnings("WeakerAccess")
+    public String getRepoName() {
+        return repoName;
     }
 
-    public ProjectFilter getProjectFilter() {
-        return projectFilter;
+    public void setRepoName(String repoName) {
+        this.repoName = repoName;
     }
 
-    public void setProjectFilter(ProjectFilter projectFilter) {
-        this.projectFilter = projectFilter;
+    @SuppressWarnings("WeakerAccess")
+    public String getProjName() {
+        return projName;
     }
 
-    public GiteaProject getSelectedProject() {
-        return selectedProject;
+    public void setProjName(String projName) {
+        this.projName = projName;
     }
 
-    public void setSelectedProject(GiteaProject selectedProject) {
-        this.selectedProject = selectedProject;
+    @SuppressWarnings("WeakerAccess")
+    public String getToken() {
+        return token;
+    }
+
+    public void setToken(String token) {
+        this.token = token;
     }
 
     @SuppressWarnings("UnusedDeclaration")
@@ -405,16 +378,5 @@ class GiteaRepository extends BaseRepositoryImpl {
     @SuppressWarnings("UnusedDeclaration")
     public void setUserLogin(String userLogin) {
         this.userLogin = userLogin;
-    }
-
-    @SuppressWarnings("UnusedDeclaration")
-    @AbstractCollection(surroundWithTag = false, elementTag = "GiteaProject", elementTypes = GiteaProject.class)
-    public List<GiteaProject> getProjects() {
-        return projects;
-    }
-
-    @SuppressWarnings("UnusedDeclaration")
-    public void setProjects(List<GiteaProject> projects) {
-        this.projects = projects;
     }
 }
