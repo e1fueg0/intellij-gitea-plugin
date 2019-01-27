@@ -12,6 +12,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.progress.ProgressIndicator;
 import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.tasks.Comment;
@@ -33,6 +34,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -45,6 +47,8 @@ import static biz.elfuego.idea.issues.gitea.util.Utils.*;
  */
 @Tag("Gitea")
 class GiteaRepository extends BaseRepositoryImpl {
+    private static final Logger logger = Logger.getInstance(GiteaRepository.class);
+
     private String userId = null;
     private String userLogin = null;
     private ProjectFilter projectFilter = ProjectFilter.GENERAL;
@@ -75,7 +79,7 @@ class GiteaRepository extends BaseRepositoryImpl {
 
     @Override
     public boolean equals(Object o) {
-        if (o == null || !(o instanceof GiteaRepository))
+        if (!(o instanceof GiteaRepository))
             return false;
         GiteaRepository other = (GiteaRepository) o;
         return equal(userId, other.userId) &&
@@ -86,7 +90,7 @@ class GiteaRepository extends BaseRepositoryImpl {
     }
 
     private boolean equal(Object o1, Object o2) {
-        return o1 == null && o2 == null || o1 != null && o2 != null && o1.equals(o2);
+        return o1 == null && o2 == null || o1 != null && o1.equals(o2);
     }
 
     @Nullable
@@ -182,7 +186,10 @@ class GiteaRepository extends BaseRepositoryImpl {
         userId = null;
         userLogin = null;
         checkSetup();
-        JsonElement response = executeMethod(new GetMethod(getApiUrl() + Consts.EndPoint.ME));
+        GetMethod method = new GetMethod(getApiUrl() + Consts.EndPoint.ME);
+        JsonElement response = executeMethod(method);
+        if (response == null)
+            throw new Exception(String.format("%s: %d, %s", Consts.ERROR, method.getStatusCode(), method.getStatusText()));
         final JsonObject obj = getObject(response);
         if (obj.has("id") && obj.has("login"))
             return;
@@ -235,12 +242,16 @@ class GiteaRepository extends BaseRepositoryImpl {
     }
 
     private Task[] getIssues() throws Exception {
-        if (ifNoSelectedProj()) return new Task[]{};
-        ensureUserId();
+        if (ifNoSelectedProj())
+            return new Task[]{};
+        if (!ensureUserId())
+            return new Task[]{};
         List<GiteaTaskImpl> result = new ArrayList<>();
 
         final String url = getApiUrl() + Consts.EndPoint.REPOS + selectedProject.getName() + Consts.EndPoint.ISSUES;
         final JsonElement response = executeMethod(new GetMethod(url));
+        if (response == null)
+            return new Task[]{};
         JsonArray tasks = getArray(response);
         for (int i = 0; i < tasks.size(); i++) {
             JsonObject current = tasks.get(i).getAsJsonObject();
@@ -260,14 +271,18 @@ class GiteaRepository extends BaseRepositoryImpl {
         return selectedProject == null || selectedProject.getId().equals("-1");
     }
 
-    public Comment[] getComments(GiteaTaskImpl task) throws Exception {
-        if (ifNoSelectedProj()) return new Comment[]{};
-        ensureUserId();
+    Comment[] getComments(GiteaTaskImpl task) throws Exception {
+        if (ifNoSelectedProj())
+            return new Comment[]{};
+        if (!ensureUserId())
+            return new Comment[]{};
         List<SimpleComment> result = new ArrayList<>();
 
         final String url = getApiUrl() + Consts.EndPoint.REPOS + selectedProject.getName() + Consts.EndPoint.ISSUES
                 + "/" + task.getId() + Consts.EndPoint.COMMENTS;
         final JsonElement response = executeMethod(new GetMethod(url));
+        if (response == null)
+            return new Comment[]{};
         JsonArray comments = getArray(response);
         for (int i = 0; i < comments.size(); i++) {
             JsonObject current = comments.get(i).getAsJsonObject();
@@ -290,10 +305,11 @@ class GiteaRepository extends BaseRepositoryImpl {
         getHttpClient().executeMethod(method);
 
         if (method.getStatusCode() != HttpStatus.SC_OK && method.getStatusCode() != HttpStatus.SC_CREATED) {
-            throw new Exception("Request failed with HTTP error: " + method.getStatusText());
+            logger.warn(String.format("HTTP error: %d, %s", method.getStatusCode(), method.getStatusText()));
+            return null;
         }
 
-        return new JsonParser().parse(new InputStreamReader(method.getResponseBodyAsStream(), "UTF-8"));
+        return new JsonParser().parse(new InputStreamReader(method.getResponseBodyAsStream(), StandardCharsets.UTF_8));
     }
 
     private HttpMethod getPatchMethod(String url, StringRequestEntity data) {
@@ -307,17 +323,22 @@ class GiteaRepository extends BaseRepositoryImpl {
         return patchMethod;
     }
 
-    private void ensureUserId() throws Exception {
+    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
+    private boolean ensureUserId() throws Exception {
         if (userLogin == null || userLogin.isEmpty()) {
             JsonElement result = executeMethod(new GetMethod(getApiUrl() + Consts.EndPoint.ME));
+            if (result == null)
+                return false;
             userId = result.getAsJsonObject().get("id").getAsJsonPrimitive().getAsString();
             userLogin = result.getAsJsonObject().get("login").getAsJsonPrimitive().getAsString();
         }
+        return true;
     }
 
     @Transient
     List<GiteaProject> getProjectList(ProjectFilter projectFilter) throws Exception {
-        ensureUserId();
+        if (!ensureUserId())
+            return Collections.emptyList();
         final String query;
         if (projectFilter == null)
             projectFilter = ProjectFilter.GENERAL;
@@ -333,6 +354,8 @@ class GiteaRepository extends BaseRepositoryImpl {
                 break;
         }
         JsonElement response = executeMethod(new GetMethod(getApiUrl() + query));
+        if (response == null)
+            return Collections.emptyList();
         JsonArray reply = getOkData(response);
         List<GiteaProject> result = new ArrayList<>();
         for (int i = 0; i < reply.size(); i++) {
@@ -348,22 +371,18 @@ class GiteaRepository extends BaseRepositoryImpl {
         return projects;
     }
 
-    @SuppressWarnings("WeakerAccess")
     public ProjectFilter getProjectFilter() {
         return projectFilter;
     }
 
-    @SuppressWarnings("WeakerAccess")
     public void setProjectFilter(ProjectFilter projectFilter) {
         this.projectFilter = projectFilter;
     }
 
-    @SuppressWarnings("WeakerAccess")
     public GiteaProject getSelectedProject() {
         return selectedProject;
     }
 
-    @SuppressWarnings("WeakerAccess")
     public void setSelectedProject(GiteaProject selectedProject) {
         this.selectedProject = selectedProject;
     }
