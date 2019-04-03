@@ -97,7 +97,7 @@ class GiteaRepository extends BaseRepositoryImpl {
 
     @Override
     public Task[] getIssues(@Nullable String query, int offset, int limit, boolean withClosed, @NotNull ProgressIndicator cancelled) throws Exception {
-        return getIssues();
+        return findIssues(query, offset, limit, withClosed, cancelled);
     }
 
     @NotNull
@@ -174,7 +174,7 @@ class GiteaRepository extends BaseRepositoryImpl {
 
     @Override
     protected int getFeatures() {
-        return NATIVE_SEARCH | STATE_UPDATING;
+        return STATE_UPDATING;
     }
 
     private void doTest() throws Exception {
@@ -245,15 +245,43 @@ class GiteaRepository extends BaseRepositoryImpl {
     }
 
     private Task[] getIssues() throws Exception {
+        return findIssues(null, -1, -1, false, null);
+    }
+
+    private Task[] findIssues(String query, int offset, int limit, boolean withClosed, ProgressIndicator cancelled) throws Exception {
         if (!ensureUserId())
             return new Task[]{};
-        List<GiteaTaskImpl> result = new ArrayList<>();
 
-        final String url = getApiUrl() + Consts.EndPoint.REPOS + getProject() + Consts.EndPoint.ISSUES;
-        final JsonElement response = executeMethod(new GetMethod(url));
+        StringBuilder qu = new StringBuilder();
+        if (query != null)
+            qu.append("?q=").append(query);
+        if (withClosed)
+            qu.append("&state=closed");
+        qu.append("&page=");
+        if (qu.length() > 0)
+            qu.setCharAt(0, '?');
+        List<GiteaTaskImpl> result = new ArrayList<>();
+        final String url = getApiUrl() + Consts.EndPoint.REPOS + getProject() + Consts.EndPoint.ISSUES + qu.toString();
+
+        int firstPage = offset / 10;
+        int lastPage = (offset + limit) / 10;
+
+        for (int p = firstPage + 1; p <= lastPage; p++) {
+            if (!loadPage(url, result, p))
+                break;
+        }
+
+        Collections.sort(result);
+        return result.toArray(new Task[0]);
+    }
+
+    private boolean loadPage(String url, List<GiteaTaskImpl> result, int page) throws Exception {
+        final JsonElement response = executeMethod(new GetMethod(url + page));
         if (response == null)
-            return new Task[]{};
+            return false;
         JsonArray tasks = getArray(response);
+        if (tasks.size() < 1)
+            return false;
         for (int i = 0; i < tasks.size(); i++) {
             JsonObject current = tasks.get(i).getAsJsonObject();
             GiteaTask raw = new GiteaTask(getProject(), current);
@@ -263,9 +291,7 @@ class GiteaRepository extends BaseRepositoryImpl {
             GiteaTaskImpl mapped = new GiteaTaskImpl(this, raw);
             result.add(mapped);
         }
-        Collections.sort(result);
-        Task[] primArray = new Task[result.size()];
-        return result.toArray(primArray);
+        return true;
     }
 
     private String getProject() {
