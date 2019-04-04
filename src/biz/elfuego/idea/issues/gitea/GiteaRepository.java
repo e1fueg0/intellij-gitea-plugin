@@ -1,9 +1,10 @@
 /*
- * Copyright © 2018 by elfuego.biz
+ * Copyright © 2019 by elfuego.biz
  */
 package biz.elfuego.idea.issues.gitea;
 
 import biz.elfuego.idea.issues.gitea.model.GiteaTask;
+import biz.elfuego.idea.issues.gitea.model.GiteaUser;
 import biz.elfuego.idea.issues.gitea.util.Consts;
 import biz.elfuego.idea.issues.gitea.util.Consts.CommentFields;
 import com.google.gson.JsonArray;
@@ -31,6 +32,7 @@ import org.jetbrains.annotations.Nullable;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -43,12 +45,14 @@ import static biz.elfuego.idea.issues.gitea.util.Utils.*;
 @Tag("Gitea")
 class GiteaRepository extends BaseRepositoryImpl {
     private static final Logger logger = Logger.getInstance(GiteaRepository.class);
+    private static final int DEFAULT_PAGE = 10;
 
     private String userId = null;
     private String userLogin = null;
     private String repoName = null;
     private String projName = null;
     private String token = null;
+    private boolean assigned = false;
 
     @SuppressWarnings("UnusedDeclaration")
     public GiteaRepository() {
@@ -70,6 +74,7 @@ class GiteaRepository extends BaseRepositoryImpl {
         repoName = other.repoName;
         projName = other.projName;
         token = other.token;
+        assigned = other.assigned;
     }
 
     @Override
@@ -81,7 +86,8 @@ class GiteaRepository extends BaseRepositoryImpl {
                 equal(userLogin, other.userLogin) &&
                 equal(repoName, other.repoName) &&
                 equal(projName, other.projName) &&
-                equal(token, other.token);
+                equal(token, other.token) &&
+                equal(assigned, other.assigned);
     }
 
     private boolean equal(Object o1, Object o2) {
@@ -248,7 +254,7 @@ class GiteaRepository extends BaseRepositoryImpl {
         return findIssues(null, -1, -1, false, null);
     }
 
-    private Task[] findIssues(String query, int offset, int limit, boolean withClosed, ProgressIndicator cancelled) throws Exception {
+    private Task[] findIssues(String query, int offset, int limit, boolean withClosed, @SuppressWarnings("unused") ProgressIndicator cancelled) throws Exception {
         if (!ensureUserId())
             return new Task[]{};
 
@@ -263,19 +269,18 @@ class GiteaRepository extends BaseRepositoryImpl {
         List<GiteaTaskImpl> result = new ArrayList<>();
         final String url = getApiUrl() + Consts.EndPoint.REPOS + getProject() + Consts.EndPoint.ISSUES + qu.toString();
 
-        int firstPage = offset / 10;
-        int lastPage = (offset + limit) / 10;
-
-        for (int p = firstPage + 1; p <= lastPage; p++) {
-            if (!loadPage(url, result, p))
-                break;
-        }
+        int firstPage = offset / DEFAULT_PAGE;
+            for (int p = firstPage + 1; ; p++) {
+                if (!loadPage(url, result, p, limit - result.size(),
+                        assigned ? ((task) -> task.isAssignedTo(userLogin)) : null))
+                    break;
+            }
 
         Collections.sort(result);
         return result.toArray(new Task[0]);
     }
 
-    private boolean loadPage(String url, List<GiteaTaskImpl> result, int page) throws Exception {
+    private boolean loadPage(String url, List<GiteaTaskImpl> result, int page, int limit, Function<GiteaTask, Boolean> val) throws Exception {
         final JsonElement response = executeMethod(new GetMethod(url + page));
         if (response == null)
             return false;
@@ -285,11 +290,15 @@ class GiteaRepository extends BaseRepositoryImpl {
         for (int i = 0; i < tasks.size(); i++) {
             JsonObject current = tasks.get(i).getAsJsonObject();
             GiteaTask raw = new GiteaTask(getProject(), current);
-            if (!raw.isValid()) {
+            if (!raw.isValid())
                 continue;
-            }
+            if (val != null && !val.apply(raw))
+                continue;
             GiteaTaskImpl mapped = new GiteaTaskImpl(this, raw);
             result.add(mapped);
+            limit--;
+            if (limit < 1)
+                return false;
         }
         return true;
     }
@@ -313,10 +322,12 @@ class GiteaRepository extends BaseRepositoryImpl {
             JsonObject current = comments.get(i).getAsJsonObject();
             Date date = getDate(current, CommentFields.DATE);
             String text = getString(current, CommentFields.TEXT, "");
-            JsonObject user = getObject(current, CommentFields.USER);
-            String author = getString(user, CommentFields.FULLNAME, "");
-            if (author.isEmpty())
-                author = getString(user, CommentFields.USERNAME, "");
+            JsonObject juser = getObject(current, CommentFields.USER);
+            String author = "";
+            if (!juser.isJsonNull()) {
+                GiteaUser user = new GiteaUser(juser);
+                author = user.getName();
+            }
             result.add(new SimpleComment(date, author, text));
         }
         Comment[] primArray = new Comment[result.size()];
@@ -404,5 +415,13 @@ class GiteaRepository extends BaseRepositoryImpl {
     @SuppressWarnings("UnusedDeclaration")
     public void setUserLogin(String userLogin) {
         this.userLogin = userLogin;
+    }
+
+    public void setAssigned(boolean assigned) {
+        this.assigned = assigned;
+    }
+
+    public boolean getAssigned() {
+        return assigned;
     }
 }

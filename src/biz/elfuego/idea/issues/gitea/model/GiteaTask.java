@@ -1,16 +1,19 @@
 /*
- * Copyright © 2018 by elfuego.biz
+ * Copyright © 2019 by elfuego.biz
  */
 package biz.elfuego.idea.issues.gitea.model;
 
 import biz.elfuego.idea.issues.gitea.util.Consts.TaskFields;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import org.apache.http.util.TextUtils;
 
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
-import static biz.elfuego.idea.issues.gitea.util.Utils.getDate;
-import static biz.elfuego.idea.issues.gitea.util.Utils.getString;
+import static biz.elfuego.idea.issues.gitea.util.Utils.*;
 
 /**
  * @author Roman Pedchenko <elfuego@elfuego.biz>
@@ -24,9 +27,10 @@ public class GiteaTask {
     private Date createdAt;
     private Date updatedAt;
     private String state;
-    private String assignee;
+    private GiteaUser assignee;
+    private List<GiteaUser> assignees;
 
-    public GiteaTask(String project, JsonObject json) {
+    public GiteaTask(String project, JsonObject json) throws Exception {
         this.project = project;
         this.fromJson(json);
     }
@@ -94,13 +98,21 @@ public class GiteaTask {
     }
 
     @SuppressWarnings("unused")
-    public String getAssignee() {
+    public GiteaUser getAssignee() {
         return assignee;
     }
 
     @SuppressWarnings("WeakerAccess")
-    public void setAssignee(String assignee) {
+    public void setAssignee(GiteaUser assignee) {
         this.assignee = assignee;
+    }
+
+    public List<GiteaUser> getAssignees() {
+        return assignees;
+    }
+
+    public void setAssignees(List<GiteaUser> assignees) {
+        this.assignees = assignees;
     }
 
     public boolean isValid() {
@@ -111,27 +123,32 @@ public class GiteaTask {
                 TextUtils.isEmpty(state));
     }
 
-    private void fromJson(JsonObject current) {
-        if (current.has(TaskFields.NUMBER)) {
-            this.setId(getString(current, TaskFields.NUMBER, ""));
-        }
-        if (current.has(TaskFields.TITLE)) {
-            this.setTitle(getString(current, TaskFields.TITLE, ""));
-        }
-        if (current.has(TaskFields.DESCRIPTION)) {
-            this.setDescription(getString(current, TaskFields.DESCRIPTION, ""));
-        }
-        if (current.has(TaskFields.CREATEDAT)) {
-            this.setCreatedAt(getDate(current, TaskFields.CREATEDAT));
-        }
-        if (current.has(TaskFields.UPDATEDAT)) {
-            this.setUpdatedAt(getDate(current, TaskFields.UPDATEDAT));
-        }
-        if (current.has(TaskFields.STATE)) {
-            this.setState(getString(current, TaskFields.STATE, ""));
-        }
-        if (current.has(TaskFields.ASSIGNEE)) {
-            this.setAssignee(getString(current, TaskFields.ASSIGNEE, ""));
+    public boolean isAssignedTo(String login) {
+        if (assignee != null && assignee.getLogin().equals(login))
+            return true;
+        if (assignees != null)
+            for (GiteaUser u : assignees)
+                if (u.getLogin().equals(login))
+                    return true;
+        return false;
+    }
+
+    private void fromJson(JsonObject current) throws Exception {
+        this.setId(getString(current, TaskFields.NUMBER, ""));
+        this.setTitle(getString(current, TaskFields.TITLE, ""));
+        this.setDescription(getString(current, TaskFields.DESCRIPTION, ""));
+        this.setCreatedAt(getDate(current, TaskFields.CREATEDAT));
+        this.setUpdatedAt(getDate(current, TaskFields.UPDATEDAT));
+        this.setState(getString(current, TaskFields.STATE, ""));
+        if (current.has(TaskFields.ASSIGNEE) && current.get(TaskFields.ASSIGNEE).isJsonObject())
+            this.setAssignee(new GiteaUser(getObject(current, TaskFields.ASSIGNEE)));
+        if (current.has(TaskFields.ASSIGNEES) && current.get(TaskFields.ASSIGNEES).isJsonArray()) {
+            JsonArray arr = getArray(current.get(TaskFields.ASSIGNEES));
+            List<GiteaUser> assignees1 = new ArrayList<>();
+            for (JsonElement el : arr)
+                if (el.isJsonObject())
+                    assignees1.add(new GiteaUser(getObject(el)));
+            this.setAssignees(assignees1);
         }
     }
 }

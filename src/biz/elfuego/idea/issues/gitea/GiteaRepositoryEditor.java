@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018 by elfuego.biz
+ * Copyright © 2019 by elfuego.biz
  */
 package biz.elfuego.idea.issues.gitea;
 
@@ -26,15 +26,20 @@ public class GiteaRepositoryEditor extends BaseRepositoryEditor<GiteaRepository>
     private JBLabel tokenLabel;
     private JPasswordField token;
 
+    private JBLabel assignedLabel;
+    private JCheckBox assignedCheckBox;
+
     GiteaRepositoryEditor(GiteaRepository repository, Project project, Consumer<GiteaRepository> consumer) {
         super(project, repository, consumer);
 
         repoName.setText(repository.getRepoName());
         projName.setText(repository.getProjName());
         token.setText(repository.getToken());
+        assignedCheckBox.setSelected(repository.getAssigned());
         installListener(repoName);
         installListener(projName);
         installListener(token);
+        installListener(assignedCheckBox);
 
         myUserNameText.setVisible(false);
         myPasswordText.setVisible(false);
@@ -64,9 +69,14 @@ public class GiteaRepositoryEditor extends BaseRepositoryEditor<GiteaRepository>
         tokenLabel = new JBLabel("Token:", SwingConstants.RIGHT);
         tokenLabel.setLabelFor(token);
 
+        assignedCheckBox = new JCheckBox();
+        assignedLabel = new JBLabel("Only issues assigned to me:", SwingConstants.RIGHT);
+        assignedLabel.setLabelFor(assignedCheckBox);
+
         return new FormBuilder().setAlignLabelOnRight(true)
                 .addLabeledComponent(repoLabel, panel)
                 .addLabeledComponent(tokenLabel, token)
+                .addLabeledComponent(assignedLabel, assignedCheckBox)
                 .getPanel();
     }
 
@@ -75,6 +85,7 @@ public class GiteaRepositoryEditor extends BaseRepositoryEditor<GiteaRepository>
         super.setAnchor(anchor);
         repoLabel.setAnchor(anchor);
         tokenLabel.setAnchor(anchor);
+//        assignedLabel.setAnchor(anchor);
     }
 
     @Override
@@ -84,6 +95,7 @@ public class GiteaRepositoryEditor extends BaseRepositoryEditor<GiteaRepository>
         myRepository.setProjName(projName.getText());
         //noinspection deprecation
         myRepository.setToken(token.getText());
+        myRepository.setAssigned(assignedCheckBox.isSelected());
         myTestButton.setEnabled(myRepository.isConfigured());
     }
 }

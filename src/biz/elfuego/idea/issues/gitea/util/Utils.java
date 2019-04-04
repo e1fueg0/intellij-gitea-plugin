@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018 by elfuego.biz
+ * Copyright © 2019 by elfuego.biz
  */
 package biz.elfuego.idea.issues.gitea.util;
 
@@ -44,7 +44,7 @@ public class Utils {
             int inset = 6;
 
             String s0 = input.substring(0, input.length() - inset);
-            String s1 = input.substring(input.length() - inset, input.length());
+            String s1 = input.substring(input.length() - inset);
 
             input = s0 + "GMT" + s1;
         }

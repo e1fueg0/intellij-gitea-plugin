@@ -1,5 +1,5 @@
 /*
- * Copyright © 2018 by elfuego.biz
+ * Copyright © 2019 by elfuego.biz
  */
 package biz.elfuego.idea.issues.gitea.util;
 
@@ -55,13 +55,22 @@ public class Consts {
         String UPDATEDAT = "updated_at";
         String STATE = "state";
         String ASSIGNEE = "assignee";
+        String ASSIGNEES = "assignees";
     }
 
     public interface CommentFields {
         String DATE = "updated_at";
         String TEXT = "body";
         String USER = "user";
-        String FULLNAME = "full_name";
+    }
+
+    public interface UserFields {
+        String ID = "id";
+        String LOGIN = "login";
+        String FULL_NAME = "full_name";
+        String EMAIL = "email";
+        String AVATAR_URL = "avatar_url";
+        String LANGUAGE = "language";
         String USERNAME = "username";
     }
 }

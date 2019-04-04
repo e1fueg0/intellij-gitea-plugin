@@ -1,3 +1,7 @@
+<!--
+  ~ Copyright © 2019 by elfuego.biz
+  -->
+
 <idea-plugin>
   <id>biz.elfuego.idea.issues.gitea</id>
   <name>Gitea issues</name>
