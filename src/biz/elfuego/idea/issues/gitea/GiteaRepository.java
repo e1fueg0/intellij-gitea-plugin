@@ -296,9 +296,11 @@ class GiteaRepository extends BaseRepositoryImpl {
                 continue;
             GiteaTaskImpl mapped = new GiteaTaskImpl(this, raw);
             result.add(mapped);
-            limit--;
-            if (limit < 1)
-                return false;
+            if (limit > -1) {
+                limit--;
+                if (limit < 1)
+                    return false;
+            }
         }
         return true;
     }
