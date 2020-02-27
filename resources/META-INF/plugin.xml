@@ -1,11 +1,11 @@
 <!--
-  ~ Copyright © 2019 by elfuego.biz
+  ~ Copyright © 2020 by elfuego.biz
   -->
 
 <idea-plugin>
   <id>biz.elfuego.idea.issues.gitea</id>
   <name>Gitea issues</name>
-  <version>1.5</version>
+  <version>1.6</version>
   <vendor email="support@elfuego.biz" url="http://elfuego.biz">elfuego.biz</vendor>
 
   <description><![CDATA[
@@ -13,8 +13,8 @@
     ]]></description>
 
   <change-notes><![CDATA[
-      Added offset/limit processing.<br>
-      Implemented 'assigned to me' filter.<br>
+      Fixes errors with loading issues without limits (contributed by billlhead).<br>
+      Fixes searching for issues containing white spaces (contributed by billlhead).<br>
     ]]>
   </change-notes>
 
