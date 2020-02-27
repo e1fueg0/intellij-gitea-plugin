@@ -30,6 +30,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.InputStreamReader;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.function.Function;
@@ -260,7 +261,7 @@ class GiteaRepository extends BaseRepositoryImpl {
 
         StringBuilder qu = new StringBuilder();
         if (query != null)
-            qu.append("?q=").append(query);
+            qu.append("?q=").append(URLEncoder.encode(query, "UTF-8"));
         if (withClosed)
             qu.append("&state=closed");
         qu.append("&page=");
@@ -296,9 +297,11 @@ class GiteaRepository extends BaseRepositoryImpl {
                 continue;
             GiteaTaskImpl mapped = new GiteaTaskImpl(this, raw);
             result.add(mapped);
-            limit--;
-            if (limit < 1)
-                return false;
+            if (limit > -1) {
+                limit--;
+                if (limit < 1)
+                    return false;
+            }
         }
         return true;
     }
